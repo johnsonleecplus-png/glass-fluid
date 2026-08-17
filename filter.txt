@@ -1,0 +1,1 @@
+drawtext=fontfile='C\:/Windows/Fonts/segoeui.ttf':text='My soft life starts now.':fontcolor=#1d1d1f@0.92:fontsize=38:x=360:y=540,fade=in:st=0:d=0.5,fade=out:st=5.38:d=0.5

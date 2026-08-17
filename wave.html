@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Soft Blue Wave Loop</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+  .stage {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    background: #ffffff;
+    overflow: hidden;
+    transform-origin: center center;
+  }
+  @media (max-aspect-ratio: 16/9) {
+    .stage { width: 100vw; height: calc(100vw * 9 / 16); }
+  }
+  @media (min-aspect-ratio: 16/9) {
+    .stage { width: calc(100vh * 16 / 9); height: 100vh; }
+  }
+
+  .wave {
+    position: absolute;
+    inset: 0;
+    width: 1920px;
+    height: 1080px;
+  }
+  .wave svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .track {
+    will-change: transform;
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <!-- Each SVG is 3840x1080 (2 wavelengths). The whole track translates by
+         -1920 (one wavelength) over the loop. All paths span y=0..1080 so the
+         entire frame is filled; the wave shape is in the path top edge. -->
+    <div class="wave"><div class="track" id="t1">
+      <svg viewBox="0 0 3840 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stop-color="#a8c4fb" stop-opacity="0.55"/>
+            <stop offset="20%" stop-color="#5b8def" stop-opacity="0.85"/>
+            <stop offset="45%" stop-color="#1a47c8" stop-opacity="0.95"/>
+            <stop offset="70%" stop-color="#0e3aa8" stop-opacity="0.95"/>
+            <stop offset="100%" stop-color="#1a47c8" stop-opacity="0.85"/>
+          </linearGradient>
+          <filter id="b1" x="-5%" y="-5%" width="110%" height="110%">
+            <feGaussianBlur stdDeviation="22" />
+          </filter>
+        </defs>
+        <path
+          d="M 0 360
+             C 320 100, 640 100, 960 360
+             S 1600 620, 1920 360
+             S 2560 100, 2880 360
+             S 3520 620, 3840 360
+             L 3840 1080
+             L 0 1080 Z"
+          fill="url(#g1)"
+          filter="url(#b1)"
+        />
+      </svg>
+    </div></div>
+
+    <div class="wave"><div class="track" id="t2">
+      <svg viewBox="0 0 3840 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stop-color="#5b8def" stop-opacity="0.55"/>
+            <stop offset="35%" stop-color="#5b8def" stop-opacity="0.90"/>
+            <stop offset="70%" stop-color="#3768ee" stop-opacity="0.95"/>
+            <stop offset="100%" stop-color="#7aa0f4" stop-opacity="0.80"/>
+          </linearGradient>
+          <filter id="b2" x="-5%" y="-5%" width="110%" height="110%">
+            <feGaussianBlur stdDeviation="28" />
+          </filter>
+        </defs>
+        <path
+          d="M 0 200
+             C 240 0, 480 0, 720 200
+             S 1200 400, 1440 200
+             S 1920 0, 2160 200
+             S 2640 400, 2880 200
+             S 3360 0, 3600 200
+             L 3840 200
+             L 3840 1080
+             L 0 1080 Z"
+          fill="url(#g2)"
+          filter="url(#b2)"
+        />
+      </svg>
+    </div></div>
+
+    <div class="wave"><div class="track" id="t3">
+      <svg viewBox="0 0 3840 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stop-color="#a8c4fb" stop-opacity="0.45"/>
+            <stop offset="50%" stop-color="#a8c4fb" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#8ab1f7" stop-opacity="0.65"/>
+          </linearGradient>
+          <filter id="b3" x="-5%" y="-5%" width="110%" height="110%">
+            <feGaussianBlur stdDeviation="45" />
+          </filter>
+        </defs>
+        <path
+          d="M 0 540
+             C 200 380, 400 380, 600 540
+             S 1000 700, 1200 540
+             S 1600 380, 1800 540
+             S 2200 700, 2400 540
+             S 2800 380, 3000 540
+             S 3400 700, 3600 540
+             L 3840 540
+             L 3840 1080
+             L 0 1080 Z"
+          fill="url(#g3)"
+          filter="url(#b3)"
+        />
+      </svg>
+    </div></div>
+
+    <div class="wave"><div class="track" id="t4">
+      <svg viewBox="0 0 3840 1080" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="g4" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stop-color="#0e3aa8" stop-opacity="0.55"/>
+            <stop offset="50%" stop-color="#0e3aa8" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#1a47c8" stop-opacity="0.30"/>
+          </linearGradient>
+          <filter id="b4" x="-5%" y="-5%" width="110%" height="110%">
+            <feGaussianBlur stdDeviation="60" />
+          </filter>
+        </defs>
+        <path
+          d="M 0 800
+             C 160 660, 320 660, 480 800
+             S 800 940, 960 800
+             S 1280 660, 1440 800
+             S 1760 940, 1920 800
+             S 2240 660, 2400 800
+             S 2720 940, 2880 800
+             S 3200 660, 3360 800
+             L 3840 800
+             L 3840 1080
+             L 0 1080 Z"
+          fill="url(#g4)"
+          filter="url(#b4)"
+        />
+      </svg>
+    </div></div>
+
+    <div class="wave" style="background: linear-gradient(to bottom, rgba(26,71,200,0.0) 0%, rgba(26,71,200,0.55) 50%, rgba(14,58,168,0.92) 100%);"></div>
+  </div>
+
+  <script>
+    // Each layer is shifted by exactly one wavelength (-1920) over the loop.
+    // At t=0 and t=LOOP the rendered frame is identical (modulo sub-pixel),
+    // so the animation is seamless.
+    const LOOP = 8000; // ms
+    const tracks = [
+      { el: document.getElementById('t1'), phase: 0.0  },
+      { el: document.getElementById('t2'), phase: 0.5  },
+      { el: document.getElementById('t3'), phase: 0.25 },
+      { el: document.getElementById('t4'), phase: 0.0  },
+    ];
+    function setTime(tMs) {
+      const phase = ((tMs % LOOP) + LOOP) % LOOP / LOOP;
+      for (const tr of tracks) {
+        const p = (phase + tr.phase) % 1;
+        const x = -1920 * p;
+        tr.el.style.transform = `translate3d(${x.toFixed(3)}px, 0, 0)`;
+      }
+    }
+    window.__setTime = setTime;
+    window.__loop = LOOP;
+
+    let t0 = performance.now();
+    function tick() {
+      const t = (performance.now() - t0) % LOOP;
+      setTime(t);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

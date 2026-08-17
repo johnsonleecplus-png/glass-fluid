@@ -1,0 +1,66 @@
+# dependencies
+node_modules/
+
+# raw frame capture (1.4GB+ for a 60s record)
+frames/
+
+# intermediate / one-off encoding artifacts
+10s-pad.mp4
+auto-fluid-10s-pad.mp4
+auto-fluid-10s-exact.mp4
+auto-fluid-30s.mp4
+auto-fluid-60s.mp4
+auto-fluid-10min.mp4
+auto-fluid-ice.mp4
+auto-fluid-tron.mp4
+smoke10s.mp4
+smoke60s.mp4
+wave-1920.mp4
+wave-base-1920.png
+wave-base.png
+wave-final.mp4
+wave-loop.mp4
+wave-loop-preview.png
+fluid-preview.png
+
+# verification artifacts
+verify/
+verify-out.log
+psnr.txt
+
+# old CSS-wave iterations and their captures
+wave-*.png
+check-*.png
+diff*.png
+f0.png
+f300.png
+head*.png
+tail*.png
+head_tail.png
+loop-*.png
+lastframe*.png
+lastframes_*.png
+t0-*.png
+tloop-*.png
+tmid-*.png
+test-red.png
+mid.png
+mid2.png
+mid3.png
+mid4.png
+mid_60s*.png
+mid_ice*.png
+mid_tron.png
+mid_glass.png
+mid_glass2.png
+
+# editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# logs
+*.log

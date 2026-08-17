@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>Mouse-reactive Fluid — WebGL2 Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #06080f;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: #e6e8ea;
+  }
+  #stage { position: fixed; inset: 0; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* 顶部信息 */
+  #info {
+    position: fixed; top: 24px; left: 24px; z-index: 10;
+    pointer-events: none;
+  }
+  #info h1 { font-size: 13px; font-weight: 500; letter-spacing: 0.12em; opacity: 0.7; }
+  #info p { font-size: 11px; opacity: 0.4; margin-top: 4px; letter-spacing: 0.04em; }
+
+  /* 底部提示 */
+  #hint {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; opacity: 0.35; letter-spacing: 0.15em; pointer-events: none;
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.35 } 50% { opacity: 0.15 } }
+
+  /* 控制面板 */
+  #panel {
+    position: fixed; top: 24px; right: 24px; z-index: 10;
+    width: 260px;
+    background: rgba(20, 22, 28, 0.72);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 18px 18px 14px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+  #panel h2 {
+    font-size: 11px; font-weight: 500; opacity: 0.5; margin-bottom: 14px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; margin: 8px 0; }
+  .row label { opacity: 0.6; flex-shrink: 0; }
+  .row .val { font-family: ui-monospace, "SF Mono", Menlo, monospace; opacity: 0.85; min-width: 44px; text-align: right; }
+  .row input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    flex: 1; margin: 0 12px; height: 2px; background: rgba(255, 255, 255, 0.12);
+    border-radius: 1px; outline: none;
+  }
+  .row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #679efe; cursor: pointer;
+    box-shadow: 0 0 8px rgba(103, 158, 254, 0.5);
+  }
+  .row input[type="range"]::-moz-range-thumb {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #679efe; cursor: pointer; border: none;
+  }
+  .presets { display: flex; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .presets button {
+    flex: 1; padding: 7px 0; background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06); color: #e6e8ea;
+    border-radius: 6px; font-size: 10px; cursor: pointer;
+    letter-spacing: 0.06em; transition: all .15s;
+  }
+  .presets button:hover { background: rgba(103, 158, 254, 0.15); border-color: rgba(103, 158, 254, 0.4); }
+
+  .err {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #06080f; color: #e6e8ea; padding: 40px; text-align: center;
+  }
+</style>
+</head>
+<body>
+  <div id="stage"><canvas id="gl"></canvas></div>
+
+  <div id="info">
+    <h1>MOUSE-REACTIVE FLUID</h1>
+    <p>WebGL2 · Curl Noise · Ping-pong Flowmap</p>
+  </div>
+
+  <div id="hint">MOVE YOUR MOUSE</div>
+
+  <div id="panel">
+    <h2>PARAMETERS</h2>
+    <div class="row">
+      <label>Decay</label>
+      <input type="range" id="decay" min="0.80" max="0.99" step="0.005" value="0.94" />
+      <span class="val" id="decayVal">0.94</span>
+    </div>
+    <div class="row">
+      <label>Distort</label>
+      <input type="range" id="distort" min="0" max="3" step="0.05" value="1.8" />
+      <span class="val" id="distortVal">1.80</span>
+    </div>
+    <div class="row">
+      <label>Swirl</label>
+      <input type="range" id="swirl" min="0" max="2" step="0.05" value="0.6" />
+      <span class="val" id="swirlVal">0.60</span>
+    </div>
+    <div class="row">
+      <label>Speed</label>
+      <input type="range" id="speed" min="0.1" max="2.5" step="0.05" value="1.0" />
+      <span class="val" id="speedVal">1.00</span>
+    </div>
+    <div class="row">
+      <label>Scale</label>
+      <input type="range" id="scale" min="0.5" max="3" step="0.05" value="1.6" />
+      <span class="val" id="scaleVal">1.60</span>
+    </div>
+    <div class="row">
+      <label>Brush R</label>
+      <input type="range" id="radius" min="0.02" max="0.25" step="0.005" value="0.10" />
+      <span class="val" id="radiusVal">0.10</span>
+    </div>
+    <div class="presets">
+      <button data-p="deepseek">DeepSeek</button>
+      <button data-p="ink">Ink</button>
+      <button data-p="lava">Lava</button>
+      <button data-p="calm">Calm</button>
+    </div>
+  </div>
+
+  <script type="module">
+  // ============================================================
+  // Shaders
+  // ============================================================
+  const VERT = `#version 300 es
+in vec2 a_pos;
+out vec2 vUv;
+void main() {
+  vUv = a_pos * 0.5 + 0.5;
+  gl_Position = vec4(a_pos, 0.0, 1.0);
+}`;
+
+  // Pass 1: paint mouse trail onto a flow map
+  //   R = influence (how much mouse "stirred" this pixel)
+  //   GB = direction (0.5 = neutral, ±0.5 = up/down/left/right)
+  // Each frame the previous map is multiplied by `decay`, so the effect
+  // slowly fades when the mouse is still.
+  const FRAG_FLOW = `#version 300 es
+precision highp float;
+in vec2 vUv;
+out vec4 o;
+uniform sampler2D uPrev;
+uniform vec2 uMouse;
+uniform vec2 uVel;
+uniform float uRadius;
+uniform float uStrength;
+uniform float uDecay;
+
+void main() {
+  vec4 prev = texture(uPrev, vUv);
+  prev.r *= uDecay;
+  prev.gb = mix(vec2(0.5), prev.gb, uDecay);
+
+  float d = distance(vUv, uMouse);
+  // Gaussian brush
+  float influence = exp(-d * d / (uRadius * uRadius * 0.5));
+  influence = max(0.0, influence - 0.005);
+
+  float speed = length(uVel);
+  float totalStrength = uStrength * 0.3 + min(speed * 3.0, 0.7) * uStrength;
+
+  prev.r = max(prev.r, influence * totalStrength);
+  float blendAmt = influence * min(totalStrength, 0.4) * 0.3;
+  prev.g = mix(prev.g, clamp(uVel.x * 2.0 + 0.5, 0.0, 1.0), blendAmt);
+  prev.b = mix(prev.b, clamp(uVel.y * 2.0 + 0.5, 0.0, 1.0), blendAmt);
+
+  o = prev;
+}`;
+
+  // Pass 2: domain-warped FBM with mouse-influenced color shift
+  const FRAG_MAIN = `#version 300 es
+precision highp float;
+in vec2 vUv;
+out vec4 o;
+
+uniform float uTime;
+uniform vec2  uRes;
+uniform float uPxRatio;
+uniform sampler2D uFlow;
+uniform vec3  uC1, uC2, uC3, uC4, uC5;
+uniform float uScale;
+uniform float uDistort;
+uniform float uSwirl;
+uniform float uSpeed;
+uniform float uGlowInt;
+
+// Hash + value noise + 4-octave FBM
+// Classic stable hash — works on lowp / SwiftShader (no precision loss in fract):
+//   fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453)
+float hash21(vec2 p) {
+  return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+float noise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float a = hash21(i);
+  float b = hash21(i + vec2(1.0, 0.0));
+  float c = hash21(i + vec2(0.0, 1.0));
+  float d = hash21(i + vec2(1.0, 1.0));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y) * 2.0 - 1.0;
+}
+float fbm(vec2 p) {
+  float v = 0.0, a = 0.6;
+  for (int i = 0; i < 4; i++) {
+    v += a * noise(p);
+    p = p * 2.03 + 1.7;
+    a *= 0.4;
+  }
+  return v;
+}
+
+void main() {
+  float aspect = uRes.x / uRes.y;
+  vec2 uv  = gl_FragCoord.xy / uRes;
+  vec2 suv = vec2(uv.x * aspect, uv.y) * uScale;
+  float t = uTime * uSpeed * 0.04;
+
+  // 1. Read flow map
+  vec4 flow = texture(uFlow, uv);
+  float influence = flow.r;
+  vec2 flowDir = (flow.gb - 0.5) * 2.0;
+
+  // 2. Mouse pushes UV in flow direction
+  suv += flowDir * influence * uDistort * 0.5;
+  // 3. Mouse also swirls the UV around its position
+  float swirlA = influence * uSwirl * 2.0;
+  float cs = cos(swirlA), sn = sin(swirlA);
+  vec2 origin = vec2(uv.x * aspect, uv.y) * uScale;
+  suv = origin + mat2(cs, sn, -sn, cs) * (suv - origin);
+
+  // 4. Domain warp: use noise to perturb UV further
+  vec2 warp = vec2(fbm(suv + 0.0), fbm(suv + 5.2));
+  vec2 uvD = suv + (warp - 0.0) * 0.6;
+
+  // 5. FBM fluid texture + swirl modulation
+  float f = fbm(uvD + t);
+  float n = f * 0.5 + 0.5;
+  float swirl = fbm(uvD * 0.8 + t * 0.5) * 0.5 + 0.5;
+
+  // 6. 5-color blend via stacked smoothsteps
+  vec3 col = mix(uC1, uC2, smoothstep(0.2, 0.5, n));
+  col = mix(col, uC3, smoothstep(0.35, 0.65, n + swirl * 0.25));
+  col = mix(col, uC4, smoothstep(0.6, 0.85, swirl) * 0.55);
+  col = mix(col, uC5, smoothstep(0.5, 0.8, n * swirl) * 0.35);
+
+  // 7. Mouse proximity: brighten & warm-shift (deepseek uses warm gold here)
+  float glow = smoothstep(0.0, 0.6, influence);
+  col += uC4 * glow * uGlowInt * 0.5;
+  col += vec3(1.0, 0.96, 0.85) * glow * uGlowInt * 0.3;
+
+  // 8. Vignette
+  float vig = 1.0 - smoothstep(0.35, 0.85, length(uv - 0.5));
+  col = mix(col * 0.45, col, vig);
+
+  o = vec4(col, 1.0);
+}`;
+
+  // ============================================================
+  // GL setup
+  // ============================================================
+  const canvas = document.getElementById('gl');
+  const gl = canvas.getContext('webgl2', {
+    alpha: false,
+    premultipliedAlpha: false,
+    powerPreference: 'low-power',
+    antialias: false,
+    preserveDrawingBuffer: true, // lets headless screenshots / readback see content
+  });
+  if (!gl) {
+    document.body.innerHTML = '<div class="err"><div><h2>WebGL2 not supported</h2><p style="opacity:0.5;margin-top:8px">Try Chrome / Edge / Firefox 90+</p></div></div>';
+    throw new Error('no webgl2');
+  }
+
+  function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+      console.error('Shader error:', gl.getShaderInfoLog(s));
+      console.error(src);
+      return null;
+    }
+    return s;
+  }
+  function link(vs, fs) {
+    const p = gl.createProgram();
+    gl.attachShader(p, vs);
+    gl.attachShader(p, fs);
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+      console.error('Link error:', gl.getProgramInfoLog(p));
+      return null;
+    }
+    return p;
+  }
+  const vs = compile(gl.VERTEX_SHADER, VERT);
+  const fsFlow = compile(gl.FRAGMENT_SHADER, FRAG_FLOW);
+  const fsMain = compile(gl.FRAGMENT_SHADER, FRAG_MAIN);
+  const progFlow = link(vs, fsFlow);
+  const progMain = link(vs, fsMain);
+  if (!progFlow || !progMain) {
+    document.body.innerHTML = '<div class="err">Shader compile / link failed — see console</div>';
+    throw new Error('shader error');
+  }
+
+  // Fullscreen quad
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+
+  function bindQuad(program) {
+    const loc = gl.getAttribLocation(program, 'a_pos');
+    if (loc < 0) return;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  }
+
+  // ============================================================
+  // Ping-pong flow-map FBOs
+  // ============================================================
+  function makeFBO(w, h) {
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const fbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { fbo, tex, w, h };
+  }
+
+  let fboA, fboB, ping = true, w = 0, h = 0, fw = 0, fh = 0;
+
+  function clearFBO(fbo) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo.fbo);
+    gl.viewport(0, 0, fbo.w, fbo.h);
+    // R=0 (no influence), GB=0.5 (neutral direction)
+    gl.clearColor(0, 0.5, 0.5, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    w = Math.round(canvas.clientWidth * dpr);
+    h = Math.round(canvas.clientHeight * dpr);
+    canvas.width = w;
+    canvas.height = h;
+    // Flow map is 1/4 resolution — big perf win, blur hides the loss
+    fw = Math.max(64, Math.round(w / 4));
+    fh = Math.max(64, Math.round(h / 4));
+    if (fboA) { gl.deleteFramebuffer(fboA.fbo); gl.deleteTexture(fboA.tex); }
+    if (fboB) { gl.deleteFramebuffer(fboB.fbo); gl.deleteTexture(fboB.tex); }
+    fboA = makeFBO(fw, fh);
+    fboB = makeFBO(fw, fh);
+    clearFBO(fboA);
+    clearFBO(fboB);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, w, h);
+  }
+
+  // ============================================================
+  // Mouse tracking
+  // ============================================================
+  const mouse = {
+    x: 0.5, y: 0.5,        // raw normalized (0..1)
+    smoothX: 0.5, smoothY: 0.5,
+    vx: 0, vy: 0,          // velocity
+  };
+
+  // Touch devices: skip mouse effects (taps don't have continuous position)
+  const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+
+  if (!isTouch) {
+    window.addEventListener('mousemove', (e) => {
+      const r = canvas.getBoundingClientRect();
+      mouse.x = (e.clientX - r.left) / r.width;
+      mouse.y = 1 - (e.clientY - r.top) / r.height; // flip Y to match WebGL UV
+    });
+    // when mouse leaves the page, gently stop
+    window.addEventListener('mouseleave', () => {
+      mouse.x = 0.5; mouse.y = 0.5;
+    });
+  }
+
+  // ============================================================
+  // Parameters + UI
+  // ============================================================
+  const params = {
+    decay: 0.94,
+    distort: 1.8,
+    swirl: 0.6,
+    speed: 1.0,
+    scale: 1.6,
+    radius: 0.10,
+    strength: 1.4,
+    glow: 0.3,
+    mouseSmoothing: 0.12,
+    mouseVel: 0.20,
+  };
+
+  // Color presets
+  const PRESETS = {
+    deepseek: {
+      c1: [0.00, 0.05, 0.10], c2: [0.10, 0.22, 0.44], c3: [0.13, 0.29, 0.49],
+      c4: [0.93, 0.85, 0.67], c5: [0.00, 0.00, 0.00],
+      decay: 0.94, distort: 1.8, swirl: 0.6, speed: 1.0, scale: 1.6, radius: 0.10, glow: 0.3,
+    },
+    ink: {
+      c1: [0.02, 0.02, 0.04], c2: [0.08, 0.10, 0.18], c3: [0.20, 0.25, 0.40],
+      c4: [0.85, 0.90, 1.00], c5: [0.00, 0.00, 0.00],
+      decay: 0.96, distort: 2.2, swirl: 0.8, speed: 0.7, scale: 1.4, radius: 0.08, glow: 0.2,
+    },
+    lava: {
+      c1: [0.05, 0.00, 0.00], c2: [0.40, 0.05, 0.00], c3: [0.90, 0.20, 0.00],
+      c4: [1.00, 0.90, 0.30], c5: [0.20, 0.00, 0.00],
+      decay: 0.97, distort: 2.5, swirl: 1.2, speed: 1.4, scale: 1.8, radius: 0.12, glow: 0.6,
+    },
+    calm: {
+      c1: [0.00, 0.10, 0.20], c2: [0.20, 0.50, 0.60], c3: [0.40, 0.70, 0.70],
+      c4: [0.90, 0.95, 0.85], c5: [0.10, 0.30, 0.30],
+      decay: 0.92, distort: 1.0, swirl: 0.3, speed: 0.5, scale: 1.2, radius: 0.14, glow: 0.15,
+    },
+  };
+  let colors = { ...PRESETS.deepseek };
+
+  function bindSliders() {
+    const ids = ['decay', 'distort', 'swirl', 'speed', 'scale', 'radius'];
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      const valEl = document.getElementById(id + 'Val');
+      el.addEventListener('input', () => {
+        const v = parseFloat(el.value);
+        params[id] = v;
+        valEl.textContent = v.toFixed(id === 'decay' || id === 'radius' ? 2 : (id === 'distort' || id === 'swirl' || id === 'scale' ? 2 : 2));
+        if (id === 'decay') valEl.textContent = v.toFixed(2);
+        if (id === 'distort' || id === 'swirl' || id === 'scale') valEl.textContent = v.toFixed(2);
+        if (id === 'speed') valEl.textContent = v.toFixed(2);
+        if (id === 'radius') valEl.textContent = v.toFixed(2);
+      });
+    }
+    document.querySelectorAll('.presets button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = PRESETS[btn.dataset.p];
+        if (!p) return;
+        Object.assign(params, p);
+        Object.assign(colors, p);
+        syncSliders();
+      });
+    });
+  }
+  function syncSliders() {
+    const map = {
+      decay: 'decay', distort: 'distort', swirl: 'swirl',
+      speed: 'speed', scale: 'scale', radius: 'radius',
+    };
+    for (const [id, key] of Object.entries(map)) {
+      const el = document.getElementById(id);
+      el.value = params[key];
+      document.getElementById(id + 'Val').textContent = params[key].toFixed(2);
+    }
+  }
+
+  // ============================================================
+  // Render loop
+  // ============================================================
+  const locFlow = {
+    prev: gl.getUniformLocation(progFlow, 'uPrev'),
+    mouse: gl.getUniformLocation(progFlow, 'uMouse'),
+    vel: gl.getUniformLocation(progFlow, 'uVel'),
+    radius: gl.getUniformLocation(progFlow, 'uRadius'),
+    strength: gl.getUniformLocation(progFlow, 'uStrength'),
+    decay: gl.getUniformLocation(progFlow, 'uDecay'),
+  };
+  const locMain = {
+    time: gl.getUniformLocation(progMain, 'uTime'),
+    res: gl.getUniformLocation(progMain, 'uRes'),
+    pxRatio: gl.getUniformLocation(progMain, 'uPxRatio'),
+    flow: gl.getUniformLocation(progMain, 'uFlow'),
+    c1: gl.getUniformLocation(progMain, 'uC1'),
+    c2: gl.getUniformLocation(progMain, 'uC2'),
+    c3: gl.getUniformLocation(progMain, 'uC3'),
+    c4: gl.getUniformLocation(progMain, 'uC4'),
+    c5: gl.getUniformLocation(progMain, 'uC5'),
+    scale: gl.getUniformLocation(progMain, 'uScale'),
+    distort: gl.getUniformLocation(progMain, 'uDistort'),
+    swirl: gl.getUniformLocation(progMain, 'uSwirl'),
+    speed: gl.getUniformLocation(progMain, 'uSpeed'),
+    glow: gl.getUniformLocation(progMain, 'uGlowInt'),
+  };
+
+  const FRAME_MS = 1000 / 30; // 30 fps cap
+  let lastT = performance.now();
+  let acc = 0;
+  let running = true;
+
+  function render(t) {
+    if (!running) return;
+    requestAnimationFrame(render);
+
+    acc += t - lastT;
+    lastT = t;
+    if (acc < FRAME_MS) return;
+    acc = acc % FRAME_MS; // skip frames if tab was paused
+
+    // Smooth mouse + velocity
+    mouse.smoothX += (mouse.x - mouse.smoothX) * params.mouseSmoothing;
+    mouse.smoothY += (mouse.y - mouse.smoothY) * params.mouseSmoothing;
+    mouse.vx += ((mouse.x - mouse.smoothX) * 0.5 - mouse.vx) * params.mouseVel;
+    mouse.vy += ((mouse.y - mouse.smoothY) * 0.5 - mouse.vy) * params.mouseVel;
+
+    // Pass 1: update flow map
+    const src = ping ? fboB : fboA;
+    const dst = ping ? fboA : fboB;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fbo);
+    gl.viewport(0, 0, fw, fh);
+    gl.useProgram(progFlow);
+    bindQuad(progFlow);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, src.tex);
+    gl.uniform1i(locFlow.prev, 0);
+    gl.uniform2f(locFlow.mouse, mouse.smoothX, mouse.smoothY);
+    gl.uniform2f(locFlow.vel, mouse.vx, mouse.vy);
+    gl.uniform1f(locFlow.radius, params.radius);
+    gl.uniform1f(locFlow.strength, isTouch ? 0 : params.strength);
+    gl.uniform1f(locFlow.decay, params.decay);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    // Pass 2: render fluid to screen
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, w, h);
+    gl.useProgram(progMain);
+    bindQuad(progMain);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, dst.tex);
+    gl.uniform1i(locMain.flow, 0);
+    gl.uniform1f(locMain.time, t * 0.001);
+    gl.uniform2f(locMain.res, w, h);
+    gl.uniform1f(locMain.pxRatio, window.devicePixelRatio || 1);
+    gl.uniform1f(locMain.scale, params.scale);
+    gl.uniform1f(locMain.distort, params.distort);
+    gl.uniform1f(locMain.swirl, params.swirl);
+    gl.uniform1f(locMain.speed, params.speed);
+    gl.uniform1f(locMain.glow, params.glow);
+    gl.uniform3f(locMain.c1, colors.c1[0], colors.c1[1], colors.c1[2]);
+    gl.uniform3f(locMain.c2, colors.c2[0], colors.c2[1], colors.c2[2]);
+    gl.uniform3f(locMain.c3, colors.c3[0], colors.c3[1], colors.c3[2]);
+    gl.uniform3f(locMain.c4, colors.c4[0], colors.c4[1], colors.c4[2]);
+    gl.uniform3f(locMain.c5, colors.c5[0], colors.c5[1], colors.c5[2]);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+    ping = !ping;
+  }
+
+  // ============================================================
+  // Boot
+  // ============================================================
+  resize();
+  window.addEventListener('resize', resize);
+  bindSliders();
+  syncSliders();
+
+  // Pause render when scrolled out of view
+  const obs = new IntersectionObserver((es) => {
+    running = es[0].isIntersecting;
+    if (running) {
+      lastT = performance.now();
+      requestAnimationFrame(render);
+    }
+  }, { threshold: 0 });
+  obs.observe(canvas);
+
+  if (running) requestAnimationFrame(render);
+  </script>
+</body>
+</html>

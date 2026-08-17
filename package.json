@@ -1,0 +1,14 @@
+{
+  "name": "glass-fluid",
+  "version": "1.0.0",
+  "type": "module",
+  "private": false,
+  "description": "Seamless looping video background generator — WebGL2 fluid shader, 7 palettes, headless Chrome recording.",
+  "scripts": {
+    "record": "node record.js",
+    "verify": "node verify-fluid.js"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.7.0"
+  }
+}
